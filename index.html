@@ -14,7 +14,7 @@
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
-            min-h-screen;
+            min-height: 100vh;
         }
 
         .animate-shake {
@@ -39,10 +39,6 @@
             z-index: 100;
             font-size: 3rem;
             animation: float-emoji 3s forwards ease-in;
-        }
-
-        .lesson-card {
-            transition: all 0.4s ease;
         }
 
         @media print {
@@ -104,7 +100,7 @@
 
         <!-- FASE 1: ENSEÑANZA -->
         <div id="learning-phase" class="no-print">
-            <div id="slide-container" class="lesson-card bg-white p-8 rounded-3xl shadow-2xl relative min-h-[500px] flex flex-col items-center justify-center text-center">
+            <div id="slide-container" class="bg-white p-8 rounded-3xl shadow-2xl relative min-h-[500px] flex flex-col items-center justify-center text-center">
                 <div id="review-tag" class="hidden absolute top-4 left-4 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
                     ⚠️ REVIEW THIS CARD <span class="text-lg">🧐</span>
                 </div>
@@ -187,7 +183,6 @@
             
             <p class="text-2xl text-gray-700 leading-relaxed mb-6">For completing the <br><span class="font-bold text-blue-600 text-3xl">Vocabulary Quest: Energy and Food Chains <span class="text-4xl">👣⚡</span></span><br>with an outstanding performance.</p>
             
-            <!-- Puntaje en el diploma -->
             <div class="mb-8">
                 <span class="text-3xl font-bold text-orange-500 bg-orange-50 px-6 py-2 rounded-full border-2 border-orange-200">Result: <span id="cert-percent">0</span>% <span class="text-2xl">🎯</span></span>
             </div>
@@ -207,7 +202,6 @@
                     <p class="text-sm text-gray-500">Date Issued <span class="text-xl">📅</span></p>
                 </div>
             </div>
-            
             <div class="mt-8 text-[10px] text-gray-400 italic">Developed by: Ing. Milko Gonzales C.</div>
         </div>
         
@@ -230,6 +224,9 @@
     </footer>
 
     <script>
+        // 1. EL PUNTO DE CONEXIÓN
+        const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbyAq9DVA2ee7Vtge9vND5PeucQposM_rYbup_nkP4DSvBxAkYmVBDcSeM3FefSy1g9x/exec";
+
         const lessons = [
             { title: "Fun and Play! <span class='text-5xl'>🏃‍♂️💨</span>", content: "Look at you play! You run. You jump. You have fun. <span class='big-emoji'>🤸‍♂️</span> But where does your body get the power? <span class='big-emoji'>🔋</span>", id: 0 },
             { title: "What is Energy? <span class='text-5xl'>⚡</span>", content: "Energy helps you run. <span class='big-emoji'>🏃‍♀️</span> Energy helps you grow. <span class='big-emoji'>🌱</span> Energy helps you do things! <span class='big-emoji'>🎨</span>", id: 1 },
@@ -261,7 +258,6 @@
         let quizScore = 0;
         let userName = "";
         let failedIndices = new Set();
-        let isQuizActive = false;
 
         function startApp() {
             const input = document.getElementById('userName');
@@ -291,7 +287,6 @@
             }
 
             document.getElementById('prev-btn').style.visibility = currentSlide === 0 ? 'hidden' : 'visible';
-            
             const nextBtn = document.getElementById('next-btn');
             const quizBtn = document.getElementById('quiz-entry-btn');
             
@@ -302,7 +297,6 @@
                 nextBtn.classList.remove('hidden');
                 quizBtn.classList.add('hidden');
             }
-
             readSlide();
         }
 
@@ -330,7 +324,6 @@
         }
 
         function startQuiz() {
-            isQuizActive = true;
             currentQuestion = 0;
             quizScore = 0;
             failedIndices.clear();
@@ -408,8 +401,8 @@
         }
 
         function triggerConfetti() {
-            const emojis = ['🍎', '🥕', '🥦', '☀️', '🌱', '🍓', '✨', '🎈', '⚡'];
-            for (let i = 0; i < 20; i++) {
+            const emojis = ['🍎', '☀️', '🌱', '⚡'];
+            for (let i = 0; i < 15; i++) {
                 const el = document.createElement('div');
                 el.className = 'confetti-piece';
                 el.innerText = emojis[Math.floor(Math.random() * emojis.length)];
@@ -425,11 +418,34 @@
             document.getElementById('result-phase').classList.remove('hidden');
             const success = quizScore >= 8;
             document.getElementById(success ? 'success-result' : 'fail-result').classList.remove('hidden');
-            if (success) speakText("Congratulations! You passed the challenge!");
-            else speakText("Good effort! Let's review and try again!");
             
-            // Envío de datos al finalizar
-            submitScore();
+            // DISPARADOR: Se graban los resultados al terminar todas las preguntas
+            saveResultsToExcel(userName, (quizScore * 10) + "%");
+        }
+
+        /**
+         * LÓGICA DE GRABACIÓN
+         */
+        function saveResultsToExcel(userName, scorePercentage) {
+            const data = {
+                name: userName,
+                grade: "2nd Energy And Food Chains",
+                testResult: scorePercentage,
+                date: new Date().toLocaleString()
+            };
+
+            // Usamos fetch con POST. Nota: mode 'no-cors' no permite leer la respuesta, 
+            // pero sí envía los datos si el Apps Script está configurado para doPost.
+            fetch(ENDPOINT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(() => console.log("Datos enviados a resultados2026"))
+            .catch(err => console.error("Error en conexión:", err));
         }
 
         function backToReview() {
@@ -443,45 +459,10 @@
         function showDiploma() {
             document.getElementById('main-container').classList.add('hidden');
             document.getElementById('diploma-screen').classList.remove('hidden');
-            document.getElementById('cert-name').innerText = userName.toUpperCase();
+            document.getElementById('cert-name').innerText = (userName || "Explorer").toUpperCase();
             document.getElementById('cert-date').innerText = new Date().toLocaleDateString();
             document.getElementById('cert-percent').innerText = (quizScore * 10);
         }
-
-        /**
-         * FUNCIÓN DE GRABACIÓN EN GOOGLE SHEETS
-         * Envía los datos a través de parámetros en la URL para máxima compatibilidad con no-cors.
-         */
-        function submitScore() {
-            const scriptUrl = "https://script.google.com/macros/s/AKfycbyAq9DVA2ee7Vtge9vND5PeucQposM_rYbup_nkP4DSvBxAkYmVBDcSeM3FefSy1g9x/exec";
-            
-            // Construimos la URL con los parámetros para que el script de Google los reciba por GET/POST de forma segura
-            const params = new URLSearchParams({
-                name: userName,
-                grade: "2nd Energy and Food Chains",
-                testResult: (quizScore * 10) + "%",
-                date: new Date().toLocaleString()
-            });
-
-            const finalUrl = `${scriptUrl}?${params.toString()}`;
-
-            // El modo no-cors es esencial para evitar errores de origen cruzado en este contexto
-            fetch(finalUrl, {
-                method: 'POST',
-                mode: 'no-cors'
-            })
-            .then(() => console.log("Intento de envío realizado."))
-            .catch(err => console.error("Error de conexión:", err));
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'u') {
-                e.preventDefault();
-                userName = userName || "Test User";
-                quizScore = 10;
-                showDiploma();
-            }
-        });
     </script>
 </body>
 </html>
